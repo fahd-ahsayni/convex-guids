@@ -4,6 +4,62 @@ A comprehensive guide to implementing and using real-time presence tracking in y
 
 ---
 
+## 🤖 Quick Start for AI Agents
+
+Follow these exact steps to implement presence in any React Native + Convex project:
+
+### Step 1: Install Package
+```bash
+bun add @convex-dev/presence
+```
+
+### Step 2: Create Backend Files
+
+**Create: `convex/convex.config.ts`**
+```typescript
+import { defineApp } from "convex/server";
+import presence from "@convex-dev/presence/convex.config";
+
+const app = defineApp();
+app.use(presence);
+
+export default app;
+```
+
+**Create: `convex/presence.ts`** (Copy full code from Backend Setup section)
+
+**Update: `convex/users.ts`** (Add `viewer` query if not exists)
+
+### Step 3: Create Frontend Files
+
+**Create: `lib/presence-constants.ts`**
+```typescript
+export const GLOBAL_PRESENCE_ROOM = "app-global-room";
+export const PRESENCE_HEARTBEAT_INTERVAL = 30000;
+```
+
+**Create: `hooks/use-presence.ts`** (Copy full code from Frontend Implementation section)
+
+### Step 4: Use in Components
+
+**In any screen to show online users:**
+```typescript
+import { useGlobalPresence } from "@/hooks/use-presence";
+const currentUser = useQuery(api.users.viewer);
+const presenceUsers = useGlobalPresence(currentUser?.name || currentUser?.email || "");
+const isOnline = presenceUsers?.some(p => p.userId === user._id) ?? false;
+```
+
+**In profile/sign out screen:**
+```typescript
+import { useSignOutWithPresence } from "@/hooks/use-presence";
+const { signOut } = useSignOutWithPresence();
+```
+
+That's it! Presence is now working.
+
+---
+
 ## 📋 Table of Contents
 
 1. [Overview](#overview)
@@ -93,7 +149,50 @@ expo-crypto
 
 ---
 
-## Backend Setup
+## 📝 Implementation Checklist
+
+Use this checklist to ensure everything is properly set up:
+
+### Backend Setup
+- [ ] Package installed: `@convex-dev/presence`
+- [ ] File created: `convex/convex.config.ts` with presence component registered
+- [ ] File created: `convex/presence.ts` with all functions:
+  - [ ] `heartbeat` mutation (handles auth, returns empty tokens if not authenticated)
+  - [ ] `list` query (public, no auth)
+  - [ ] `disconnect` mutation (no auth, for HTTP beacon)
+  - [ ] `disconnectCurrentUser` mutation (requires auth)
+  - [ ] `listUser` query
+  - [ ] `listRoom` query
+- [ ] File updated: `convex/users.ts` with `viewer` query
+
+### Frontend Setup
+- [ ] File created: `lib/presence-constants.ts` with:
+  - [ ] `GLOBAL_PRESENCE_ROOM` constant
+  - [ ] `PRESENCE_HEARTBEAT_INTERVAL` constant
+- [ ] File created: `hooks/use-presence.ts` with:
+  - [ ] `useGlobalPresence` hook
+  - [ ] `useRoomPresence` hook
+  - [ ] `useSignOutWithPresence` hook
+
+### Usage Implementation
+- [ ] Import `useGlobalPresence` in component
+- [ ] Get current user with `useQuery(api.users.viewer)`
+- [ ] Call `useGlobalPresence(userName)` with user's display name
+- [ ] Check online status: `presenceUsers?.some(p => p.userId === user._id)`
+- [ ] Replace `useAuthActions()` with `useSignOutWithPresence()` in sign out
+
+### Testing
+- [ ] User shows as online when signed in
+- [ ] User shows as offline when signed out
+- [ ] Multiple users show correctly
+- [ ] Presence updates in real-time
+- [ ] No console errors
+
+---
+
+## 🎯 Complete Implementation Guide
+
+### Backend Setup
 
 ### File Structure
 
@@ -276,11 +375,10 @@ export const viewer = query({
 
 ```
 lib/
-├── presence-constants.ts  # Configuration constants
-└── auth-helpers.ts        # Sign out with cleanup
+└── presence-constants.ts  # Configuration constants
 
 hooks/
-└── use-presence.ts        # React hooks
+└── use-presence.ts        # React hooks (includes sign out)
 
 app/
 └── (tabs)/
@@ -311,9 +409,11 @@ export const PRESENCE_HEARTBEAT_INTERVAL = 30000; // 30 seconds
 **File: `hooks/use-presence.ts`**
 
 ```typescript
-import { usePresence as usePresenceBase } from "@convex-dev/presence/react-native";
 import { api } from "@/convex/_generated/api";
 import { GLOBAL_PRESENCE_ROOM } from "@/lib/presence-constants";
+import { useAuthActions } from "@convex-dev/auth/react";
+import { usePresence as usePresenceBase } from "@convex-dev/presence/react-native";
+import { useMutation } from "convex/react";
 
 /**
  * Hook to track presence in the global app room
@@ -358,16 +458,6 @@ export function useRoomPresence(
     userName
   );
 }
-```
-
-### 3. Sign Out with Presence Cleanup
-
-**File: `lib/auth-helpers.ts`**
-
-```typescript
-import { useAuthActions } from "@convex-dev/auth/react";
-import { useMutation } from "convex/react";
-import { api } from "@/convex/_generated/api";
 
 /**
  * Hook that provides sign out with automatic presence cleanup
@@ -399,6 +489,8 @@ export function useSignOutWithPresence() {
   return { signOut: signOutWithPresence };
 }
 ```
+
+**Important:** All three functions are in the same file for simplicity.
 
 ---
 
@@ -513,7 +605,7 @@ function ChatRoom({ chatId }: { chatId: string }) {
 **File: `app/(tabs)/profile.tsx`**
 
 ```tsx
-import { useSignOutWithPresence } from "@/lib/auth-helpers";
+import { useSignOutWithPresence } from "@/hooks/use-presence";
 import { Button } from "@/components/ui/button";
 import { Text } from "@/components/ui/text";
 import { useState } from "react";
@@ -924,8 +1016,8 @@ This presence system provides:
 Key files:
 - `convex/convex.config.ts` - Component registration
 - `convex/presence.ts` - Backend logic
-- `hooks/use-presence.ts` - Frontend hooks
-- `lib/auth-helpers.ts` - Sign out with cleanup
+- `hooks/use-presence.ts` - Frontend hooks (includes sign out)
+- `lib/presence-constants.ts` - Configuration
 
 For questions or issues, refer to the [Convex Presence Documentation](https://github.com/get-convex/presence).
 
